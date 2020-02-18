@@ -205,6 +205,30 @@ impl<S: Signer> fmt::Display for CmdDet<S> {
 
 impl<S: Signer> eventsourcing::CommandDetails for CmdDet<S> {
     type Event = Evt;
+
+    fn code(&self) -> &str {
+        match self {
+            CmdDet::AddParent(_, _) => "ca_parent_add",
+            CmdDet::RemoveParent(_) => "ca_parent_remove",
+            CmdDet::UpdateParentContact(_, _) => "ca_parent_update",
+            CmdDet::ChildAdd(_, _, _) => "ca_child_add",
+            CmdDet::ChildRemove(_, _) => "ca_child_remove",
+            CmdDet::ChildUpdate(_, _) => "ca_child_update",
+            CmdDet::ChildCertify(_, _, _) => "ca_child_certify",
+            CmdDet::ChildRevokeKey(_, _, _) => "ca_child_revoke_key",
+            CmdDet::RepoUpdate(_, _) => "ca_repo_config",
+            CmdDet::RepoRemoveOld(_) => "ca_repo_clean_old",
+            CmdDet::GenerateNewIdKey(_) => "ca_id_regenerate",
+            CmdDet::MakeTrustAnchor(_, _) => "ca_make_ta",
+            CmdDet::KeyRollInitiate(_, _) => "ca_key_roll_initiate",
+            CmdDet::KeyRollActivate(_, _) => "ca_key_roll_activate",
+            CmdDet::KeyRollFinish(_, _) => "ca_key_roll_finish",
+            CmdDet::UpdateRcvdCert(_, _, _) => "ca_update_certificate",
+            CmdDet::UpdateResourceClasses(_, _, _) => "ca_update_entitlements",
+            CmdDet::RouteAuthorizationsUpdate(_, _) => "ca_roas_update",
+            CmdDet::Republish(_) => "ca_republish",
+        }
+    }
 }
 
 impl<S: Signer> CmdDet<S> {

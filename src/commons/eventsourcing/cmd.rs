@@ -47,6 +47,9 @@ pub trait Command: fmt::Display {
 
     /// Get a summary for the command audit log
     fn summary(&self) -> String;
+
+    /// Get a code for the command audit log
+    fn code(&self) -> &str;
 }
 
 //------------ SentCommand ---------------------------------------------------
@@ -73,6 +76,10 @@ impl<C: CommandDetails> Command for SentCommand<C> {
 
     fn summary(&self) -> String {
         self.details.to_string()
+    }
+
+    fn code(&self) -> &str {
+        self.details.code()
     }
 }
 
@@ -111,6 +118,8 @@ impl<C: CommandDetails> fmt::Display for SentCommand<C> {
 /// id and version boilerplate from ['SentCommand'].
 pub trait CommandDetails: fmt::Display + 'static {
     type Event: Event;
+
+    fn code(&self) -> &str;
 }
 
 //------------ StoredCommand -------------------------------------------------
@@ -125,6 +134,7 @@ pub struct StoredCommand {
     handle: Handle,
     version: u64,
     summary: String,
+    code: Option<String>,
     effect: StoredEffect,
 }
 
@@ -157,6 +167,7 @@ pub struct StoredCommandBuilder {
     handle: Handle,
     version: u64,
     summary: String,
+    code: String,
 }
 
 impl StoredCommandBuilder {
@@ -165,12 +176,14 @@ impl StoredCommandBuilder {
         let time = Time::now();
         let handle = cmd.handle().clone();
         let summary = cmd.summary();
+        let code = cmd.code();
         StoredCommandBuilder {
             actor,
             time,
             handle,
             version,
             summary,
+            code: code.to_string(),
         }
     }
 
@@ -181,6 +194,7 @@ impl StoredCommandBuilder {
             handle: self.handle,
             version: self.version,
             summary: self.summary,
+            code: Some(self.code),
             effect,
         }
     }

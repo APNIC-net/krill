@@ -17,6 +17,8 @@ pub use self::roas::*;
 
 pub mod rrdp;
 
+pub mod hal;
+
 use std::collections::HashMap;
 use std::fmt;
 

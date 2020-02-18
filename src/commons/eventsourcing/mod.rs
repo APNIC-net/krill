@@ -139,6 +139,13 @@ mod tests {
 
     impl CommandDetails for PersonCommandDetails {
         type Event = PersonEvent;
+
+        fn code(&self) -> &str {
+            match self {
+                PersonCommandDetails::ChangeName(_) => "change_name",
+                PersonCommandDetails::GoAroundTheSun => "go_around_sun",
+            }
+        }
     }
 
     impl PersonCommand {

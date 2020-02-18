@@ -20,6 +20,14 @@ pub enum CmdDet {
 
 impl CommandDetails for CmdDet {
     type Event = Evt;
+
+    fn code(&self) -> &str {
+        match self {
+            CmdDet::AddPublisher(_) => "pubd_publisher_add",
+            CmdDet::RemovePublisher(_) => "pubd_publisher_remove",
+            CmdDet::Publish(_, _) => "pubd_publish",
+        }
+    }
 }
 
 impl CmdDet {

@@ -1,6 +1,7 @@
 use std::fmt;
 
 use super::{Command, Event, Storable};
+use commons::eventsourcing::cmd::StoredCommand;
 
 //------------ Aggregate -----------------------------------------------------
 
@@ -59,6 +60,11 @@ pub trait Aggregate: Storable + Send + Sync + 'static {
     /// The command is moved, because we want to enable moving its data
     /// without reallocating.
     fn process_command(&self, command: Self::Command) -> Result<Vec<Self::Event>, Self::Error>;
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct AggregateCommandHistory {
+    commands: Vec<StoredCommand>,
 }
 
 //------------ AggregateHistory ----------------------------------------------
