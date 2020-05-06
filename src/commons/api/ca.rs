@@ -22,7 +22,7 @@ use rpki::x509::{Serial, Time};
 use crate::commons::api::publication;
 use crate::commons::api::publication::Publish;
 use crate::commons::api::{
-    Base64, ChildHandle, ErrorResponse, Handle, HexEncodedHash, IssuanceRequest, ListReply,
+    AsNumber, Base64, ChildHandle, ErrorResponse, Handle, HexEncodedHash, IssuanceRequest, ListReply,
     ParentCaContact, ParentHandle, RepositoryContact, RequestResourceLimit, RoaDefinition,
 };
 use crate::commons::eventsourcing::AggregateHistory;
@@ -680,6 +680,12 @@ impl From<&RouteAuthorization> for ObjectName {
 impl From<&RoaDefinition> for ObjectName {
     fn from(def: &RoaDefinition) -> Self {
         ObjectName(format!("{}.roa", hex::encode(def.to_string())))
+    }
+}
+
+impl From<&AsNumber> for ObjectName {
+    fn from(asn: &AsNumber) -> Self {
+        ObjectName(format!("{}.roa", hex::encode(asn.to_string())))
     }
 }
 

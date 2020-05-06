@@ -34,6 +34,7 @@ pub use self::events::IniDet;
 
 mod server;
 pub use self::server::CaServer;
+pub use self::server::RoaPrefixGroupingStrategy;
 
 mod signing;
 pub use self::signing::SignSupport;

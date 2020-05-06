@@ -1,4 +1,5 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::str::FromStr;
 
 use chrono::Duration;
 use serde::{Deserialize, Serialize};
@@ -10,10 +11,10 @@ use rpki::x509::Time;
 use crate::commons::api::rrdp::PublishElement;
 use crate::commons::api::Base64;
 use crate::commons::api::{
-    AddedObject, CurrentObject, CurrentObjects, EntitlementClass, HexEncodedHash, IssuanceRequest,
+    AddedObject, AsNumber, CurrentObject, CurrentObjects, EntitlementClass, HexEncodedHash, IssuanceRequest,
     IssuedCert, ObjectName, ObjectsDelta, ParentHandle, RcvdCert, ReplacedObject, RepoInfo,
     RequestResourceLimit, ResourceClassInfo, ResourceClassName, ResourceSet, Revocation,
-    RevocationRequest, RevokedObject, UpdatedObject, WithdrawnObject,
+    RevocationRequest, RevokedObject, RoaDefinition, TypedPrefix, UpdatedObject, WithdrawnObject,
 };
 use crate::commons::error::Error;
 use crate::commons::KrillResult;
@@ -22,7 +23,7 @@ use crate::daemon::ca::signing::CsrInfo;
 use crate::daemon::ca::{
     self, ta_handle, AddedOrUpdated, CertifiedKey, ChildCertificates, CrlBuilder, CurrentKey,
     CurrentObjectSetDelta, EvtDet, KeyState, ManifestBuilder, NewKey, OldKey, PendingKey, RoaInfo,
-    Roas, RouteAuthorization, SignSupport, Signer,
+    Roas, RouteAuthorization, SignSupport, Signer, RoaPrefixGroupingStrategy,
 };
 
 //------------ ResourceClass -----------------------------------------------
@@ -208,6 +209,7 @@ impl ResourceClass {
         rcvd_cert: RcvdCert,
         repo_info: &RepoInfo,
         signer: &S,
+        roa_prefix_grouping_strategy: &RoaPrefixGroupingStrategy, 
     ) -> KrillResult<Vec<EvtDet>> {
         // If this is for a pending key, then we need to promote this key
 
@@ -253,7 +255,7 @@ impl ResourceClass {
                 }
             }
             KeyState::Active(current) => {
-                self.update_rcvd_cert_current(current, rcvd_cert, repo_info, signer)
+                self.update_rcvd_cert_current(current, rcvd_cert, repo_info, signer, roa_prefix_grouping_strategy)
             }
             KeyState::RollPending(pending, current) => {
                 if rcvd_cert_ki == pending.key_id() {
@@ -269,7 +271,7 @@ impl ResourceClass {
                         delta,
                     )])
                 } else {
-                    self.update_rcvd_cert_current(current, rcvd_cert, repo_info, signer)
+                    self.update_rcvd_cert_current(current, rcvd_cert, repo_info, signer, roa_prefix_grouping_strategy)
                 }
             }
             KeyState::RollNew(new, current) => {
@@ -280,12 +282,12 @@ impl ResourceClass {
                         rcvd_cert,
                     )])
                 } else {
-                    self.update_rcvd_cert_current(current, rcvd_cert, repo_info, signer)
+                    self.update_rcvd_cert_current(current, rcvd_cert, repo_info, signer, roa_prefix_grouping_strategy)
                 }
             }
             KeyState::RollOld(current, _old) => {
                 // We will never request a new certificate for an old key
-                self.update_rcvd_cert_current(current, rcvd_cert, repo_info, signer)
+                self.update_rcvd_cert_current(current, rcvd_cert, repo_info, signer, roa_prefix_grouping_strategy)
             }
         }
     }
@@ -296,6 +298,7 @@ impl ResourceClass {
         rcvd_cert: RcvdCert,
         repo_info: &RepoInfo,
         signer: &S,
+        roa_prefix_grouping_strategy: &RoaPrefixGroupingStrategy,
     ) -> KrillResult<Vec<EvtDet>> {
         let rcvd_cert_ki = rcvd_cert.cert().subject_key_identifier();
         if rcvd_cert_ki != current.key_id() {
@@ -320,6 +323,7 @@ impl ResourceClass {
                 repo_info,
                 &publish_mode,
                 signer,
+                roa_prefix_grouping_strategy,
             )?)
         }
 
@@ -453,6 +457,7 @@ impl ResourceClass {
         repo_info: &RepoInfo,
         mode: &PublishMode,
         signer: &S,
+        roa_prefix_grouping_strategy: &RoaPrefixGroupingStrategy,
     ) -> KrillResult<Vec<EvtDet>> {
         let mut res = vec![];
 
@@ -460,7 +465,8 @@ impl ResourceClass {
         let mut delta = ObjectsDelta::new(repo_info.ca_repository(ns));
         let mut revocations = vec![];
 
-        let roa_updates = self.update_roas(authorizations, mode, signer)?;
+        let roa_updates = self.update_roas(authorizations, mode, 
+                                           signer, &roa_prefix_grouping_strategy)?;
         if roa_updates.contains_changes() {
             for added in roa_updates.added().into_iter() {
                 delta.add(added);
@@ -792,6 +798,7 @@ impl ResourceClass {
         repo_info: &RepoInfo,
         staging: Duration,
         signer: &S,
+        roa_prefix_grouping_strategy: &RoaPrefixGroupingStrategy,
     ) -> KrillResult<Vec<EvtDet>> {
         if !self.key_state.has_new_key() || self.last_key_change + staging > Time::now() {
             return Ok(vec![]);
@@ -812,6 +819,7 @@ impl ResourceClass {
             repo_info,
             &PublishMode::KeyRollActivation,
             signer,
+            roa_prefix_grouping_strategy,
         )?);
 
         Ok(res)
@@ -988,6 +996,7 @@ impl ResourceClass {
         auths: &[RouteAuthorization],
         mode: &PublishMode,
         signer: &S,
+        roa_prefix_grouping_strategy: &RoaPrefixGroupingStrategy,
     ) -> KrillResult<RoaUpdates> {
         let mut updates = RoaUpdates::default();
 
@@ -1007,37 +1016,85 @@ impl ResourceClass {
             _ => None,
         };
 
-        // Remove any ROAs no longer in auths, or no longer in resources.
-        for (current_auth, roa_info) in self.roas.iter() {
-            if !auths.contains(current_auth) || !resources.contains(&current_auth.prefix().into()) {
-                updates.remove(*current_auth, RevokedObject::from(roa_info.object()));
-            }
-        }
-
-        for auth in auths {
-            // if the auth is not in this resource class, just skip it.
-            if !resources.contains(&auth.prefix().into()) {
-                continue;
-            }
-
-            match self.roas.get(auth) {
-                None => {
-                    // NO ROA yet, so create one.
-                    let roa = Roas::make_roa(auth, key, new_repo.as_ref(), signer)?;
-                    let name = ObjectName::from(auth);
-                    updates.update(*auth, RoaInfo::new_roa(&roa, name));
-                }
-                Some(roa) => {
-                    // Re-issue if the ROA is getting close to its expiration time, or if we are
-                    //  activating the new key.
-                    let expiring = roa.object().expires() < Time::now() + Duration::weeks(4);
-                    let activating = mode == &PublishMode::KeyRollActivation;
-
-                    if expiring || activating || new_repo.is_some() {
-                        let new_roa = Roas::make_roa(auth, key, new_repo.as_ref(), signer)?;
-                        let name = ObjectName::from(auth);
-                        updates.update(*auth, RoaInfo::updated_roa(roa, &new_roa, name));
+        match roa_prefix_grouping_strategy {
+            RoaPrefixGroupingStrategy::RoaPerPrefix => {
+                // Remove any ROAs no longer in auths, or no longer in resources.
+                for (current_auth, roa_info) in self.roas.iter() {
+                    if !auths.contains(current_auth) || !resources.contains(&current_auth.prefix().into()) {
+                        updates.remove(*current_auth, RevokedObject::from(roa_info.object()));
                     }
+                }
+
+                for auth in auths {
+                    // if the auth is not in this resource class, just skip it.
+                    if !resources.contains(&auth.prefix().into()) {
+                        continue;
+                    }
+
+                    match self.roas.get(auth) {
+                        None => {
+                            // NO ROA yet, so create one.
+                            let roa = Roas::make_roa(auth, key, new_repo.as_ref(), signer)?;
+                            let name = ObjectName::from(auth);
+                            updates.update(*auth, RoaInfo::new_roa(&roa, name));
+                        }
+                        Some(roa) => {
+                            // Re-issue if the ROA is getting close to its expiration time, or if we are
+                            //  activating the new key.
+                            let expiring = roa.object().expires() < Time::now() + Duration::weeks(4);
+                            let activating = mode == &PublishMode::KeyRollActivation;
+
+                            if expiring || activating || new_repo.is_some() {
+                                let new_roa = Roas::make_roa(auth, key, new_repo.as_ref(), signer)?;
+                                let name = ObjectName::from(auth);
+                                updates.update(*auth, RoaInfo::updated_roa(roa, &new_roa, name));
+                            }
+                        }
+                    }
+                }
+            }
+
+            RoaPrefixGroupingStrategy::RoaPerAsn => {
+                let mut new_roas_per_asn: HashMap<AsNumber, HashSet<RouteAuthorization>> = HashMap::new();
+
+                for auth in auths {
+                    // if the auth is not in this resource class, just skip it.
+                    if !resources.contains(&auth.prefix().into()) {
+                        continue;
+                    }
+
+                    let asn = auth.asn();
+                    let new_auths = new_roas_per_asn.entry(asn).or_insert(HashSet::new());
+                    new_auths.insert(*auth);
+                }
+
+                for (roa_auth, roa_info) in self.roas.iter() {
+                    let asn = roa_auth.asn();
+                    let current_auths: HashSet<RouteAuthorization> = roa_info.retrieve_route_authorizations()?.drain(..).collect();
+
+                    let new_auths_for_asn = new_roas_per_asn.remove(&asn);
+
+                    if new_auths_for_asn.is_none() {
+                        // remove roa
+                        updates.remove(*roa_auth, RevokedObject::from(roa_info.object()));
+                        continue;
+                    }
+
+                    let new_auths_for_asn = new_auths_for_asn.unwrap();
+
+                    if new_auths_for_asn != current_auths {
+                        let new_roa = Roas::make_roa_multi(&new_auths_for_asn, key, new_repo.as_ref(), signer)?;
+                        updates.update(*roa_auth, RoaInfo::updated_roa(roa_info, &new_roa, roa_info.name().clone()));
+                    }
+                }
+
+                for (asn, asn_auths) in new_roas_per_asn {
+                    // NO ROA yet, so create one.
+                    let roa = Roas::make_roa_multi(&asn_auths, key, new_repo.as_ref(), signer)?;
+                    let name = ObjectName::from(&asn);
+                    let auth = RouteAuthorization::new(
+                        RoaDefinition::new(asn, TypedPrefix::from_str("0.0.0.0/0").unwrap(), None));
+                    updates.update(auth, RoaInfo::new_roa(&roa, name));
                 }
             }
         }

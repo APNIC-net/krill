@@ -80,6 +80,7 @@ impl KrillServer {
         let rrdp_base_uri = &config.rrdp_service_uri();
         let token = &config.auth_token;
         let ca_refresh_rate = config.ca_refresh;
+        let roa_prefix_grouping_strategy = config.roa_prefix_grouping_strategy;
 
         info!("Starting {} v{}", KRILL_SERVER_APP, KRILL_VERSION);
         info!("{} uses service uri: {}", KRILL_SERVER_APP, service_uri);
@@ -112,7 +113,8 @@ impl KrillServer {
         let pubserver: Option<Arc<PubServer>> = pubserver.map(Arc::new);
 
         let event_queue = Arc::new(EventQueueListener::in_mem());
-        let caserver = Arc::new(ca::CaServer::build(work_dir, event_queue.clone(), signer)?);
+        let caserver = Arc::new(ca::CaServer::build(work_dir, event_queue.clone(), 
+                                                    signer, roa_prefix_grouping_strategy)?);
 
         if config.use_ta() {
             let ta_handle = ta_handle();

@@ -1,10 +1,12 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt;
+use std::net::IpAddr;
 use std::ops::Deref;
 use std::str::FromStr;
 
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
+use rpki::resources;
 use rpki::roa::{Roa, RoaBuilder};
 use rpki::sigobj::SignedObjectBuilder;
 use rpki::uri;
@@ -14,6 +16,8 @@ use crate::commons::api::{
     CurrentObject, ObjectName, ReplacedObject, RoaDefinition, RoaDefinitionUpdates,
 };
 use crate::commons::KrillResult;
+use crate::commons::error::Error;
+use crate::commons::api::{AsNumber, TypedPrefix};
 use crate::daemon::ca::events::RoaUpdates;
 use crate::daemon::ca::{self, CertifiedKey, SignSupport, Signer};
 
@@ -220,6 +224,38 @@ impl RoaInfo {
     }
 }
 
+// Utility methods
+impl RoaInfo {
+    pub fn retrieve_route_authorizations(&self) -> KrillResult<Vec<RouteAuthorization>> {
+        let roa = Roa::decode(self.object.content().to_bytes(), false)
+            .map_err(|_| Error::Custom(format!("Error decoding ROA {}", self.name)))?;
+
+        let mut auths: Vec<RouteAuthorization> = Vec::new();
+        let roa_content = roa.content();
+        let asn = AsNumber::new(u32::from(roa_content.as_id()));
+
+        for fria in roa_content.iter() {
+            let (prefix, max_length) = RoaInfo::route_authorization_from(&fria);
+            auths.push(RouteAuthorization(RoaDefinition::new(asn, prefix, max_length)));
+        }
+
+        Ok(auths)
+    }
+
+    fn route_authorization_from(fria: &rpki::roa::FriendlyRoaIpAddress) -> (TypedPrefix, Option<u8>)  {
+        let address = fria.address();
+        let addr_len = fria.address_length();
+        let max_length = if addr_len == fria.max_length() { Option::None } else { Option::Some(fria.max_length()) };
+        let prefix = match address {
+            IpAddr::V4(v4) => TypedPrefix::v4_from_prefix(resources::Prefix::new(resources::Addr::from_v4(v4), addr_len)),
+            IpAddr::V6(v6) => TypedPrefix::v6_from_prefix(resources::Prefix::new(resources::Addr::from_v6(v6), addr_len)),
+        };
+
+        (prefix, max_length)
+    }
+}
+
+
 //------------ Roas --------------------------------------------------------
 
 /// ROAs held by a resource class in a CA.
@@ -271,7 +307,19 @@ impl Roas {
         new_repo: Option<&uri::Rsync>,
         signer: &S,
     ) -> KrillResult<Roa> {
-        let prefix = auth.prefix();
+        let mut auths = HashSet::with_capacity(1);
+        auths.insert(*auth);
+        Roas::make_roa_multi(&auths, certified_key, new_repo, signer)
+    }
+
+    pub fn make_roa_multi<S: Signer>(
+        auths: &HashSet<RouteAuthorization>,
+        certified_key: &CertifiedKey,
+        new_repo: Option<&uri::Rsync>,
+        signer: &S,
+    ) -> KrillResult<Roa> {
+        assert!(auths.len() > 0);
+        let auth = *(auths.iter().take(1).next().unwrap());
 
         let incoming_cert = certified_key.incoming_cert();
         let crl_uri = match &new_repo {
@@ -280,8 +328,8 @@ impl Roas {
         };
 
         let roa_uri = match &new_repo {
-            None => incoming_cert.uri_for_object(auth),
-            Some(base_uri) => base_uri.join(ObjectName::from(auth).as_bytes()),
+            None => incoming_cert.uri_for_object(&auth),
+            Some(base_uri) => base_uri.join(ObjectName::from(&auth).as_bytes()),
         };
 
         let aia = incoming_cert.uri();
@@ -289,7 +337,10 @@ impl Roas {
         let signing_key = certified_key.key_id();
 
         let mut roa_builder = RoaBuilder::new(auth.asn().into());
-        roa_builder.push_addr(prefix.ip_addr(), prefix.addr_len(), auth.max_length());
+        auths.iter().for_each(|auth| { 
+            let prefix = auth.prefix();
+            roa_builder.push_addr(prefix.ip_addr(), prefix.addr_len(), auth.max_length());
+        });
         let mut object_builder = SignedObjectBuilder::new(
             Serial::random(signer).map_err(ca::Error::signer)?,
             SignSupport::sign_validity_year(),

@@ -20,7 +20,7 @@ use crate::commons::api::Token;
 use crate::commons::util::ext_serde;
 use crate::constants::*;
 use crate::daemon::http::ssl;
-
+use crate::daemon::ca::RoaPrefixGroupingStrategy;
 //------------ ConfigDefaults ------------------------------------------------
 
 pub struct ConfigDefaults;
@@ -93,6 +93,10 @@ impl ConfigDefaults {
     fn post_limit_rfc6492() -> usize {
         1024 * 1024 // 1MB (for ref. the NIC br cert is about 200kB)
     }
+
+    fn roa_prefix_grouping_strategy() -> RoaPrefixGroupingStrategy {
+        RoaPrefixGroupingStrategy::RoaPerPrefix
+    }
 }
 
 //------------ Config --------------------------------------------------------
@@ -162,6 +166,9 @@ pub struct Config {
 
     #[serde(default = "ConfigDefaults::post_limit_rfc6492")]
     pub post_limit_rfc6492: usize,
+
+    #[serde(default = "ConfigDefaults::roa_prefix_grouping_strategy")]
+    pub roa_prefix_grouping_strategy: RoaPrefixGroupingStrategy,
 }
 
 /// # Accessors
@@ -231,6 +238,7 @@ impl Config {
         let post_limit_api = ConfigDefaults::post_limit_api();
         let post_limit_rfc8181 = ConfigDefaults::post_limit_rfc8181();
         let post_limit_rfc6492 = ConfigDefaults::post_limit_rfc6492();
+        let roa_prefix_grouping_strategy = ConfigDefaults::roa_prefix_grouping_strategy();
 
         Config {
             ip,
@@ -252,6 +260,7 @@ impl Config {
             post_limit_api,
             post_limit_rfc8181,
             post_limit_rfc6492,
+            roa_prefix_grouping_strategy,
         }
     }
 

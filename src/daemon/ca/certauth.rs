@@ -32,6 +32,7 @@ use crate::commons::KrillResult;
 use crate::constants::CHILD_CERTIFICATE_REISSUE_WEEKS;
 use crate::daemon::ca::events::ChildCertificateUpdates;
 use crate::daemon::ca::rc::PublishMode;
+use crate::daemon::ca::server::RoaPrefixGroupingStrategy;
 use crate::daemon::ca::signing::CsrInfo;
 use crate::daemon::ca::{
     ta_handle, ChildDetails, Cmd, CmdDet, CurrentObjectSetDelta, Evt, EvtDet, Ini, ResourceClass,
@@ -64,6 +65,11 @@ impl Rfc8183Id {
 }
 
 //------------ CertAuth ----------------------------------------------------
+
+/// The RoaPrefixGroupingStrategy to be used by all CAs. Ideally this ould be a struct property,
+/// but since this is currently shared among all CAs and to allow it to be modified when the server
+/// restarts, it's being defined as a mutable static variable for now.
+static mut ROA_PREFIX_GROUPING_STRATEGY: RoaPrefixGroupingStrategy = RoaPrefixGroupingStrategy::const_default();
 
 /// This type defines a Certification Authority at a slightly higher level
 /// than one might expect.
@@ -1257,7 +1263,8 @@ impl<S: Signer> CertAuth<S> {
 
         let repo = self.get_repository_contact()?;
 
-        let evt_details = rc.update_received_cert(rcvd_cert, repo.repo_info(), signer.deref())?;
+        let evt_details = rc.update_received_cert(rcvd_cert, repo.repo_info(), 
+                                                  signer.deref(), &Self::get_roa_prefix_grouping_strategy())?;
 
         let mut res = vec![];
         let mut version = self.version;
@@ -1322,7 +1329,7 @@ impl<S: Signer> CertAuth<S> {
             let repo = self.get_repository_contact()?;
 
             for details in rc
-                .keyroll_activate(repo.repo_info(), staging, signer.deref())?
+                .keyroll_activate(repo.repo_info(), staging, signer.deref(), &Self::get_roa_prefix_grouping_strategy())?
                 .into_iter()
             {
                 activated = true;
@@ -1402,7 +1409,8 @@ impl<S: Signer> CertAuth<S> {
                     self.get_repository_contact()?.repo_info()
                 };
 
-                res.append(&mut rc.republish(auths.as_slice(), repo_info, mode, signer)?);
+                res.append(&mut rc.republish(auths.as_slice(), repo_info, mode, 
+                                             signer, &Self::get_roa_prefix_grouping_strategy())?);
             }
         }
 
@@ -1540,7 +1548,8 @@ impl<S: Signer> CertAuth<S> {
 
         // Update ROAs, and derive deltas and revocations for publishing.
         for (rcn, rc) in self.resources.iter() {
-            let updates = rc.update_roas(current_auths.as_slice(), &mode, signer.deref())?;
+            let updates = rc.update_roas(current_auths.as_slice(), &mode, 
+                                         signer.deref(), &Self::get_roa_prefix_grouping_strategy())?;
             if updates.contains_changes() {
                 let mut delta = ObjectsDelta::new(repo.repo_info().ca_repository(rc.name_space()));
 
@@ -1579,6 +1588,20 @@ impl<S: Signer> CertAuth<S> {
         }
 
         Ok(res)
+    }
+}
+
+impl<S: Signer> CertAuth<S> {
+    pub fn set_roa_prefix_grouping_strategy(roa_prefix_grouping_strategy: RoaPrefixGroupingStrategy) {
+        unsafe {
+            ROA_PREFIX_GROUPING_STRATEGY = roa_prefix_grouping_strategy;
+        }
+    }
+
+    fn get_roa_prefix_grouping_strategy() -> RoaPrefixGroupingStrategy {
+        unsafe {
+            ROA_PREFIX_GROUPING_STRATEGY
+        }
     }
 }
 
