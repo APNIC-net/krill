@@ -1004,10 +1004,9 @@ impl<S: Signer> CaServer<S> {
 }
 
 
-//------------ RapPrefixGroupingStrategy -----------------------------------
+//------------ RoaPrefixGroupingStrategy -----------------------------------
 
-/// Defines the strategy to be used during ROA creation/update in relation
-/// to prefix grouping.
+/// Defines the prefix grouping strategy to be used during ROA creation/update.
 ///
 /// RoaPerPrefix: One ROA per prefix (and ASN).
 ///

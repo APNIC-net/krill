@@ -8,6 +8,8 @@ use rpki::cert::Cert;
 use rpki::crypto::KeyIdentifier;
 use rpki::x509::Time;
 
+use uuid::Uuid;
+
 use crate::commons::api::rrdp::PublishElement;
 use crate::commons::api::Base64;
 use crate::commons::api::{
@@ -1083,18 +1085,19 @@ impl ResourceClass {
                     let new_auths_for_asn = new_auths_for_asn.unwrap();
 
                     if new_auths_for_asn != current_auths {
-                        let new_roa = Roas::make_roa_multi(&new_auths_for_asn, key, new_repo.as_ref(), signer)?;
+                        let new_roa = Roas::make_roa_multi(&new_auths_for_asn, key, new_repo.as_ref(),
+                                                           signer, &roa_info.name().to_string())?;
                         updates.update(*roa_auth, RoaInfo::updated_roa(roa_info, &new_roa, roa_info.name().clone()));
                     }
                 }
 
                 for (asn, asn_auths) in new_roas_per_asn {
                     // NO ROA yet, so create one.
-                    let roa = Roas::make_roa_multi(&asn_auths, key, new_repo.as_ref(), signer)?;
-                    let name = ObjectName::from(&asn);
+                    let roa_name = generate_uuid_roa_name();
+                    let roa = Roas::make_roa_multi(&asn_auths, key, new_repo.as_ref(), signer, &roa_name)?;
                     let auth = RouteAuthorization::new(
                         RoaDefinition::new(asn, TypedPrefix::from_str("0.0.0.0/0").unwrap(), None));
-                    updates.update(auth, RoaInfo::new_roa(&roa, name));
+                    updates.update(auth, RoaInfo::new_roa(&roa, (&roa_name).into()));
                 }
             }
         }
@@ -1106,6 +1109,10 @@ impl ResourceClass {
     pub fn roas_updated(&mut self, updates: RoaUpdates) {
         self.roas.updated(updates);
     }
+}
+
+fn generate_uuid_roa_name() -> String {
+    format!("{}.roa", Uuid::new_v4())
 }
 
 //------------ PublishMode -------------------------------------------------

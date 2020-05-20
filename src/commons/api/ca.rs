@@ -689,6 +689,12 @@ impl From<&AsNumber> for ObjectName {
     }
 }
 
+impl From<&String> for ObjectName {
+    fn from(string : &String) -> Self {
+        ObjectName(string.clone())
+    }
+}
+
 impl Into<Bytes> for ObjectName {
     fn into(self) -> Bytes {
         Bytes::from(self.0)

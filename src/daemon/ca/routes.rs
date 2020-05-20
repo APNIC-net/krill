@@ -309,7 +309,7 @@ impl Roas {
     ) -> KrillResult<Roa> {
         let mut auths = HashSet::with_capacity(1);
         auths.insert(*auth);
-        Roas::make_roa_multi(&auths, certified_key, new_repo, signer)
+        Roas::make_roa_multi(&auths, certified_key, new_repo, signer, auth)
     }
 
     pub fn make_roa_multi<S: Signer>(
@@ -317,9 +317,11 @@ impl Roas {
         certified_key: &CertifiedKey,
         new_repo: Option<&uri::Rsync>,
         signer: &S,
+        name: impl Into<ObjectName>,
     ) -> KrillResult<Roa> {
         assert!(auths.len() > 0);
-        let auth = *(auths.iter().take(1).next().unwrap());
+        let _auth = *auths.iter().take(1).next().unwrap();
+        let asn = _auth.asn();
 
         let incoming_cert = certified_key.incoming_cert();
         let crl_uri = match &new_repo {
@@ -328,15 +330,15 @@ impl Roas {
         };
 
         let roa_uri = match &new_repo {
-            None => incoming_cert.uri_for_object(&auth),
-            Some(base_uri) => base_uri.join(ObjectName::from(&auth).as_bytes()),
+            None => incoming_cert.uri_for_object(name),
+            Some(base_uri) => base_uri.join((name.into() as ObjectName).as_bytes()),
         };
 
         let aia = incoming_cert.uri();
 
         let signing_key = certified_key.key_id();
 
-        let mut roa_builder = RoaBuilder::new(auth.asn().into());
+        let mut roa_builder = RoaBuilder::new(asn.into());
         auths.iter().for_each(|auth| { 
             let prefix = auth.prefix();
             roa_builder.push_addr(prefix.ip_addr(), prefix.addr_len(), auth.max_length());
