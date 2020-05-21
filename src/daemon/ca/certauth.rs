@@ -66,9 +66,9 @@ impl Rfc8183Id {
 
 //------------ CertAuth ----------------------------------------------------
 
-/// The RoaPrefixGroupingStrategy to be used by all CAs. Ideally this ould be a struct property,
-/// but since this is currently shared among all CAs and to allow it to be modified when the server
-/// restarts, it's being defined as a mutable static variable for now.
+/// The RoaPrefixGroupingStrategy to be used by all CAs. Ideally this would be a struct property,
+/// but since this is currently shared among all CAs and in order to allow it to be modified when restating the server,
+/// it's being defined here as a mutable static variable for now.
 static mut ROA_PREFIX_GROUPING_STRATEGY: RoaPrefixGroupingStrategy = RoaPrefixGroupingStrategy::const_default();
 
 /// This type defines a Certification Authority at a slightly higher level

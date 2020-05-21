@@ -410,7 +410,6 @@ impl<S: Signer> CaServer<S> {
         } else {
             let init = IniDet::init(handle, self.signer.clone())?;
             self.ca_store.add(init)?;
-
             Ok(())
         }
     }
