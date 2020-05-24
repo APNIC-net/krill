@@ -1095,6 +1095,7 @@ impl ResourceClass {
                     // NO ROA yet, so create one.
                     let roa_name = generate_uuid_roa_name();
                     let roa = Roas::make_roa_multi(&asn_auths, key, new_repo.as_ref(), signer, &roa_name)?;
+                    // notice that the roa definition prefix is not relevat for this strategy, so using 0.0.0.0/0
                     let auth = RouteAuthorization::new(
                         RoaDefinition::new(asn, TypedPrefix::from_str("0.0.0.0/0").unwrap(), None));
                     updates.update(auth, RoaInfo::new_roa(&roa, (&roa_name).into()));

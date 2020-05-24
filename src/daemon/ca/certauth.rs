@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use std::env;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 
 use bytes::Bytes;
 use chrono::Duration;
@@ -66,10 +66,13 @@ impl Rfc8183Id {
 
 //------------ CertAuth ----------------------------------------------------
 
-/// The RoaPrefixGroupingStrategy to be used by all CAs. Ideally this would be a struct property,
-/// but since this is currently shared among all CAs and in order to allow it to be modified when restating the server,
-/// it's being defined here as a mutable static variable for now.
-static mut ROA_PREFIX_GROUPING_STRATEGY: RoaPrefixGroupingStrategy = RoaPrefixGroupingStrategy::const_default();
+lazy_static! {
+    /// The RoaPrefixGroupingStrategy to be used by all CAs. Ideally this would be a struct property,
+    /// but since this is currently shared among all CAs and in order to allow it to be modified when restating the
+    /// server, it's being defined here as a mutable static variable for now.
+    static ref ROA_PREFIX_GROUPING_STRATEGY: Mutex<RoaPrefixGroupingStrategy> =
+        Mutex::new(RoaPrefixGroupingStrategy::default());
+}
 
 /// This type defines a Certification Authority at a slightly higher level
 /// than one might expect.
@@ -1593,15 +1596,11 @@ impl<S: Signer> CertAuth<S> {
 
 impl<S: Signer> CertAuth<S> {
     pub fn set_roa_prefix_grouping_strategy(roa_prefix_grouping_strategy: RoaPrefixGroupingStrategy) {
-        unsafe {
-            ROA_PREFIX_GROUPING_STRATEGY = roa_prefix_grouping_strategy;
-        }
+        *(ROA_PREFIX_GROUPING_STRATEGY.lock().unwrap()) = roa_prefix_grouping_strategy;
     }
 
     fn get_roa_prefix_grouping_strategy() -> RoaPrefixGroupingStrategy {
-        unsafe {
-            ROA_PREFIX_GROUPING_STRATEGY
-        }
+        ROA_PREFIX_GROUPING_STRATEGY.lock().unwrap().deref().clone()
     }
 }
 

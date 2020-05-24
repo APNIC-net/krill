@@ -1017,12 +1017,8 @@ pub enum RoaPrefixGroupingStrategy {
     RoaPerAsn
 }
 
-impl RoaPrefixGroupingStrategy {
-    pub const fn const_default() -> Self { Self::RoaPerPrefix }
-}
-
 impl Default for RoaPrefixGroupingStrategy {
-    fn default() -> Self { Self::const_default() }
+    fn default() -> Self { Self::RoaPerPrefix }
 }
 
 //------------ Tests ---------------------------------------------------------
