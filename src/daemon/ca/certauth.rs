@@ -1267,7 +1267,7 @@ impl<S: Signer> CertAuth<S> {
         let repo = self.get_repository_contact()?;
 
         let evt_details = rc.update_received_cert(rcvd_cert, repo.repo_info(), 
-                                                  signer.deref(), &Self::get_roa_prefix_grouping_strategy())?;
+                                                  signer.deref(), &get_roa_prefix_grouping_strategy())?;
 
         let mut res = vec![];
         let mut version = self.version;
@@ -1332,7 +1332,7 @@ impl<S: Signer> CertAuth<S> {
             let repo = self.get_repository_contact()?;
 
             for details in rc
-                .keyroll_activate(repo.repo_info(), staging, signer.deref(), &Self::get_roa_prefix_grouping_strategy())?
+                .keyroll_activate(repo.repo_info(), staging, signer.deref(), &get_roa_prefix_grouping_strategy())?
                 .into_iter()
             {
                 activated = true;
@@ -1413,7 +1413,7 @@ impl<S: Signer> CertAuth<S> {
                 };
 
                 res.append(&mut rc.republish(auths.as_slice(), repo_info, mode, 
-                                             signer, &Self::get_roa_prefix_grouping_strategy())?);
+                                             signer, &get_roa_prefix_grouping_strategy())?);
             }
         }
 
@@ -1552,7 +1552,7 @@ impl<S: Signer> CertAuth<S> {
         // Update ROAs, and derive deltas and revocations for publishing.
         for (rcn, rc) in self.resources.iter() {
             let updates = rc.update_roas(current_auths.as_slice(), &mode, 
-                                         signer.deref(), &Self::get_roa_prefix_grouping_strategy())?;
+                                         signer.deref(), &get_roa_prefix_grouping_strategy())?;
             if updates.contains_changes() {
                 let mut delta = ObjectsDelta::new(repo.repo_info().ca_repository(rc.name_space()));
 
@@ -1594,14 +1594,12 @@ impl<S: Signer> CertAuth<S> {
     }
 }
 
-impl<S: Signer> CertAuth<S> {
-    pub fn set_roa_prefix_grouping_strategy(roa_prefix_grouping_strategy: RoaPrefixGroupingStrategy) {
-        *(ROA_PREFIX_GROUPING_STRATEGY.lock().unwrap()) = roa_prefix_grouping_strategy;
-    }
+pub fn set_roa_prefix_grouping_strategy(roa_prefix_grouping_strategy: RoaPrefixGroupingStrategy) {
+    *(ROA_PREFIX_GROUPING_STRATEGY.lock().unwrap()) = roa_prefix_grouping_strategy;
+}
 
-    fn get_roa_prefix_grouping_strategy() -> RoaPrefixGroupingStrategy {
-        ROA_PREFIX_GROUPING_STRATEGY.lock().unwrap().deref().clone()
-    }
+fn get_roa_prefix_grouping_strategy() -> RoaPrefixGroupingStrategy {
+    ROA_PREFIX_GROUPING_STRATEGY.lock().unwrap().deref().clone()
 }
 
 //------------ Tests ---------------------------------------------------------

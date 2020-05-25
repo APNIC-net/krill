@@ -453,3 +453,12 @@ pub fn wait_for_published_objects(publisher: &PublisherHandle, objects: &[&str])
 
     panic!("Exiting test");
 }
+
+
+pub fn count_roa_files(publisher: &PublisherHandle) -> u32 {
+    let details = publisher_details(publisher);
+    let current_files = details.current_files();
+
+    let current_files: Vec<&Rsync> = current_files.iter().map(|p| p.uri()).collect();
+    current_files.iter().filter(|uri| uri.ends_with(".roa")).count() as u32
+}

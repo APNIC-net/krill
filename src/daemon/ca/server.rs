@@ -51,7 +51,7 @@ impl<S: Signer> CaServer<S> {
     ) -> KrillResult<Self> {
         let mut ca_store = DiskAggregateStore::<CertAuth<S>>::new(work_dir, CASERVER_DIR)?;
         ca_store.add_listener(events_queue);
-        CertAuth::<S>::set_roa_prefix_grouping_strategy(roa_prefix_grouping_strategy);
+        ca::set_roa_prefix_grouping_strategy(roa_prefix_grouping_strategy);
 
         Ok(CaServer {
             signer,
