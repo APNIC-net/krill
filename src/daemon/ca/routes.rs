@@ -235,26 +235,26 @@ impl RoaInfo {
         let asn = AsNumber::new(u32::from(roa_content.as_id()));
 
         for fria in roa_content.iter() {
-            let (prefix, max_length) = RoaInfo::route_authorization_from(&fria);
+            let (prefix, max_length) = convert_friendly_roa_ip_addr_to_typed_prefix(&fria);
             auths.push(RouteAuthorization(RoaDefinition::new(asn, prefix, max_length)));
         }
 
         Ok(auths)
     }
 
-    fn route_authorization_from(fria: &rpki::roa::FriendlyRoaIpAddress) -> (TypedPrefix, Option<u8>)  {
-        let address = fria.address();
-        let addr_len = fria.address_length();
-        let max_length = if addr_len == fria.max_length() { Option::None } else { Option::Some(fria.max_length()) };
-        let prefix = match address {
-            IpAddr::V4(v4) => TypedPrefix::v4_from_prefix(resources::Prefix::new(resources::Addr::from_v4(v4), addr_len)),
-            IpAddr::V6(v6) => TypedPrefix::v6_from_prefix(resources::Prefix::new(resources::Addr::from_v6(v6), addr_len)),
-        };
-
-        (prefix, max_length)
-    }
 }
 
+pub fn convert_friendly_roa_ip_addr_to_typed_prefix(fria: &rpki::roa::FriendlyRoaIpAddress) -> (TypedPrefix, Option<u8>)  {
+    let address = fria.address();
+    let addr_len = fria.address_length();
+    let max_length = if addr_len == fria.max_length() { Option::None } else { Option::Some(fria.max_length()) };
+    let prefix = match address {
+        IpAddr::V4(v4) => TypedPrefix::v4_from_prefix(resources::Prefix::new(resources::Addr::from_v4(v4), addr_len)),
+        IpAddr::V6(v6) => TypedPrefix::v6_from_prefix(resources::Prefix::new(resources::Addr::from_v6(v6), addr_len)),
+    };
+
+    (prefix, max_length)
+}
 
 //------------ Roas --------------------------------------------------------
 

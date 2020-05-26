@@ -4,20 +4,21 @@ use std::path::PathBuf;
 use std::{thread, time};
 
 use rpki::uri::Rsync;
+use rpki::roa::Roa;
 
 use crate::cli::options::{BulkCaCommand, CaCommand, Command, Options, PublishersCommand};
 use crate::cli::report::{ApiResponse, ReportFormat};
 use crate::cli::{Error, KrillClient};
 use crate::commons::api::{
-    AddChildRequest, CertAuthInfo, CertAuthInit, CertifiedKeyInfo, ChildAuthRequest, ChildHandle,
+    AddChildRequest, AsNumber, Base64, CertAuthInfo, CertAuthInit, CertifiedKeyInfo, ChildAuthRequest, ChildHandle,
     Handle, ParentCaContact, ParentCaReq, ParentHandle, Publish, PublisherDetails, PublisherHandle,
-    RepositoryUpdate, ResourceClassKeysInfo, ResourceClassName, ResourceSet, RoaDefinitionUpdates,
+    RepositoryUpdate, ResourceClassKeysInfo, ResourceClassName, ResourceSet, RoaDefinition, RoaDefinitionUpdates,
     UpdateChildRequest,
 };
 use crate::commons::remote::rfc8183;
 use crate::commons::remote::rfc8183::ChildRequest;
 use crate::commons::util::test;
-use crate::daemon::ca::ta_handle;
+use crate::daemon::ca::{convert_friendly_roa_ip_addr_to_typed_prefix, ta_handle};
 use crate::daemon::config::Config;
 use crate::daemon::http::server;
 
@@ -461,4 +462,53 @@ pub fn count_roa_files(publisher: &PublisherHandle) -> u32 {
 
     let current_files: Vec<&Rsync> = current_files.iter().map(|p| p.uri()).collect();
     current_files.iter().filter(|uri| uri.ends_with(".roa")).count() as u32
+}
+
+pub fn get_published_objects(publisher: &PublisherHandle) -> Vec<Rsync> {
+    let details = publisher_details(publisher);
+    details.current_files().iter().map(|p| p.uri()).map(|u| u.clone()).collect()
+}
+
+pub fn wait_for_updated_published_objects(publisher: &PublisherHandle, previous_files: Vec<Rsync>) {
+    let mut details = publisher_details(publisher);
+    let previous_file_refs: Vec<&Rsync> = previous_files.iter().collect();
+
+    for _counter in 1..=90 {
+        let current_files: Vec<&Rsync> = details.current_files().iter().map(|p| p.uri()).collect();
+
+        if current_files != previous_file_refs {
+            return
+        }
+
+        wait_seconds(1);
+
+        details = publisher_details(publisher);
+    }
+
+    panic!("Publishing did not happened after 90 seconds.");
+}
+
+pub fn roas_contain_route(publisher: &PublisherHandle, roa_def: &RoaDefinition) -> bool {
+    let details = publisher_details(publisher);
+    let current_files = details.current_files();
+    let current_roas: Vec<&Base64> = current_files.iter().filter(|p| p.uri().ends_with(".roa"))
+        .map(|p| p.base64()).collect();
+
+    for roa_base64 in current_roas.iter() {
+        let roa = Roa::decode(roa_base64.to_bytes(), false).unwrap();
+        let roa_content = roa.content();
+        let asn = AsNumber::new(u32::from(roa_content.as_id()));
+
+        if roa_def.asn() == asn {
+            for fria in roa_content.iter() {
+                let (prefix, max_length) = convert_friendly_roa_ip_addr_to_typed_prefix(&fria);
+
+                if prefix == roa_def.prefix() && max_length == roa_def.max_length() {
+                    return true;
+                }
+            }
+        }
+    }
+
+    false
 }
