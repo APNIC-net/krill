@@ -6,6 +6,7 @@ use crate::commons::error::Error;
 mod certauth;
 pub use self::certauth::CertAuth;
 pub use self::certauth::Rfc8183Id;
+pub use self::certauth::set_roa_prefix_grouping_strategy;
 
 mod child;
 pub use self::child::*;
@@ -34,6 +35,7 @@ pub use self::events::IniDet;
 
 mod server;
 pub use self::server::CaServer;
+pub use self::server::RoaPrefixGroupingStrategy;
 
 mod signing;
 pub use self::signing::SignSupport;

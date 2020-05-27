@@ -47,9 +47,11 @@ impl<S: Signer> CaServer<S> {
         work_dir: &PathBuf,
         events_queue: Arc<EventQueueListener>,
         signer: Arc<RwLock<S>>,
+        roa_prefix_grouping_strategy: RoaPrefixGroupingStrategy,
     ) -> KrillResult<Self> {
         let mut ca_store = DiskAggregateStore::<CertAuth<S>>::new(work_dir, CASERVER_DIR)?;
         ca_store.add_listener(events_queue);
+        ca::set_roa_prefix_grouping_strategy(roa_prefix_grouping_strategy);
 
         Ok(CaServer {
             signer,
@@ -1000,6 +1002,25 @@ impl<S: Signer> CaServer<S> {
     }
 }
 
+
+//------------ RoaPrefixGroupingStrategy -----------------------------------
+
+/// Defines the prefix grouping strategy to be used during ROA creation/update.
+///
+/// RoaPerPrefix: One ROA per prefix (and ASN).
+///
+/// RoaPerAsn: Groups all prefixes authorisations for an ASN in a single ROA.
+///
+#[derive(Clone, Eq, PartialEq, Debug, Copy, Display, Deserialize, Serialize)]
+pub enum RoaPrefixGroupingStrategy {
+    RoaPerPrefix,
+    RoaPerAsn
+}
+
+impl Default for RoaPrefixGroupingStrategy {
+    fn default() -> Self { Self::RoaPerPrefix }
+}
+
 //------------ Tests ---------------------------------------------------------
 
 #[cfg(test)]
@@ -1021,7 +1042,8 @@ mod tests {
 
             let event_queue = Arc::new(EventQueueListener::in_mem());
 
-            let server = CaServer::<OpenSslSigner>::build(&d, event_queue, signer).unwrap();
+            let server = CaServer::<OpenSslSigner>::build(&d, event_queue, signer, 
+                    RoaPrefixGroupingStrategy::RoaPerPrefix).unwrap();
 
             let repo_info = {
                 let base_uri = test::rsync("rsync://localhost/repo/ta/");

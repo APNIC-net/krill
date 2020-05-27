@@ -12,6 +12,8 @@ extern crate chrono;
 extern crate futures;
 extern crate hex;
 #[macro_use]
+extern crate lazy_static;
+#[macro_use]
 extern crate log;
 extern crate actix_service;
 extern crate actix_web;

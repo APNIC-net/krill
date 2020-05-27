@@ -223,6 +223,16 @@ impl TypedPrefix {
     }
 }
 
+impl TypedPrefix {
+    pub fn v4_from_prefix(prefix: Prefix) -> TypedPrefix {
+        TypedPrefix::V4(Ipv4Prefix(prefix))
+    }
+
+    pub fn v6_from_prefix(prefix: Prefix) -> TypedPrefix {
+        TypedPrefix::V6(Ipv6Prefix(prefix))
+    }
+}
+
 impl FromStr for TypedPrefix {
     type Err = AuthorizationFmtError;
 
