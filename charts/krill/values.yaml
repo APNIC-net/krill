@@ -41,6 +41,11 @@ krillConf:
   log_type: "file"
   log_file: "/dev/stdout"
 
+  # optional additional krill config to add, see https://github.com/APNIC-net/krill/blob/master/defaults/krill.conf
+  extra_args: {}
+    # repo_enabled: false
+    # log_level: "warn"
+
 service:
   type: ClusterIP
   port: 3000
