@@ -88,6 +88,27 @@ resources: {}
 #  cpu: 100m
 #  memory: 128Mi
 
+# Persistent data store
+persistence:
+  enabled: false
+  #
+  # Existing claim to use
+  existingClaim: ""
+  # Existing claim's subPath to use, e.g. "data" (optional)
+  subPath: ""
+  #
+  # Persistent Volume Storage Class
+  # If defined, storageClassName: <storageClass>
+  # If set to "-", storageClassName: "", which disables dynamic provisioning
+  # If undefined (the default) or set to null, no storageClassName spec is
+  #   set, choosing the default provisioner.  (gp2 on AWS, standard on
+  #   GKE, AWS & OpenStack)
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  #
+  # Persistant storage size request
+  size: 1Gi
+
 autoscaling:
   enabled: false
   minReplicas: 1

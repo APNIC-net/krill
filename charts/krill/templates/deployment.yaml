@@ -39,9 +39,12 @@ spec:
               containerPort: 3000
               protocol: TCP
           volumeMounts:
-            - mountPath: {{ .Values.krillConf.data_dir }}/krill.conf
-              name: krill-conf
+            - name: krill-conf
+              mountPath: {{ .Values.krillConf.data_dir }}/krill.conf
               subPath: krill.conf
+            - name: data
+              mountPath: {{ .Values.krillConf.data_dir }}
+              subPath: {{ .Values.persistence.subPath | default "" | quote }}
           {{- if .Values.livenessProbe.enabled }}
           livenessProbe:
             httpGet:
@@ -82,3 +85,10 @@ spec:
         - name: krill-conf
           configMap:
             name: {{ template "krill.fullname" . }}
+        - name: data
+        {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim | default (include "krill.fullname" .) }}
+        {{- else }}
+          emptyDir: {}
+        {{- end }}
