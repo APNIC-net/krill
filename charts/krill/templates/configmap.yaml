@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "krill.fullname" . }}
+  labels:
+    {{- include "krill.labels" . | nindent 4 }}
+data:
+  krill.conf: |
+    # See https://github.com/APNIC-net/krill/blob/master/defaults/krill.conf
+    ip = "0.0.0.0"
+    port = {{ .Values.service.port }}
+    data_dir = {{ .Values.krillConf.data_dir | quote }}
+    log_type = {{ .Values.krillConf.log_type | quote }}
+    {{- if eq .Values.krillConf.log_type "file" }}
+    log_file = {{ .Values.krillConf.log_file | quote }}
+    {{- end }}

@@ -13,8 +13,9 @@ spec:
       {{- include "krill.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-    {{- with .Values.podAnnotations }}
       annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}
     {{- end }}
       labels:
@@ -35,8 +36,12 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: 80
+              containerPort: 3000
               protocol: TCP
+          volumeMounts:
+            - mountPath: {{ .Values.krillConf.data_dir }}/krill.conf
+              name: krill-conf
+              subPath: krill.conf
           {{- if .Values.livenessProbe.enabled }}
           livenessProbe:
             httpGet:
@@ -73,3 +78,7 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      volumes:
+        - name: krill-conf
+          configMap:
+            name: {{ template "krill.fullname" . }}

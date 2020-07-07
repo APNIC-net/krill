@@ -36,6 +36,11 @@ securityContext: {}
   # runAsNonRoot: true
   # runAsUser: 1000
 
+krillConf:
+  data_dir: "/var/krill/data"
+  log_type: "file"
+  log_file: "/dev/stdout"
+
 service:
   type: ClusterIP
   port: 3000
