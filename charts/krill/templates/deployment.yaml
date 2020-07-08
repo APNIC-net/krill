@@ -47,8 +47,7 @@ spec:
               subPath: {{ .Values.persistence.subPath | default "" | quote }}
           {{- if .Values.livenessProbe.enabled }}
           livenessProbe:
-            httpGet:
-              path: /
+            tcpSocket:
               port: http
             failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
             initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
@@ -58,8 +57,7 @@ spec:
           {{- end }}
           {{- if .Values.readinessProbe.enabled }}
           readinessProbe:
-            httpGet:
-              path: /
+            tcpSocket:
               port: http
             failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
             initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
