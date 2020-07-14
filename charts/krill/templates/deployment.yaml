@@ -45,12 +45,12 @@ spec:
             - name: data
               mountPath: {{ .Values.krillConf.data_dir }}
               subPath: {{ .Values.persistence.subPath | default "" | quote }}
-            {{- if .Values.persistence.rrdp.enabled }}
+            {{- if and .Values.persistence.enabled .Values.persistence.rrdp.enabled }}
             - name: rrdp-data
               mountPath: {{ .Values.krillConf.data_dir }}/rrdp
               subPath: {{ .Values.persistence.rrdp.subPath | default "" | quote }}
             {{- end }}
-            {{- if .Values.persistence.rsync.enabled }}
+            {{- if and .Values.persistence.enabled .Values.persistence.rsync.enabled }}
             - name: rsync-data
               mountPath: {{ .Values.krillConf.data_dir }}/rsync
               subPath: {{ .Values.persistence.rsync.subPath | default "" | quote }}
@@ -100,12 +100,12 @@ spec:
         {{- else }}
           emptyDir: {}
         {{- end }}
-        {{- if .Values.persistence.rrdp.enabled }}
+        {{- if and .Values.persistence.enabled .Values.persistence.rrdp.enabled }}
         - name: rrdp-data
           persistentVolumeClaim:
             claimName: {{ .Values.persistence.rrdp.existingClaim | default (printf "%s-rrdp" (include "krill.fullname" .)) }}
         {{- end }}
-        {{- if .Values.persistence.rsync.enabled }}
+        {{- if and .Values.persistence.enabled .Values.persistence.rsync.enabled }}
         - name: rsync-data
           persistentVolumeClaim:
             claimName: {{ .Values.persistence.rsync.existingClaim | default (printf "%s-rsync" (include "krill.fullname" .)) }}
