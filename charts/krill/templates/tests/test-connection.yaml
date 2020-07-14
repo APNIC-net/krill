@@ -11,5 +11,5 @@ spec:
     - name: wget
       image: busybox
       command: ['wget']
-      args: ['{{ include "krill.fullname" . }}:{{ .Values.service.port }}']
+      args: ['--no-check-certificate', 'https://{{ include "krill.fullname" . }}:{{ .Values.service.port }}']
   restartPolicy: Never
