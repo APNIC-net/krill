@@ -47,12 +47,12 @@ spec:
               subPath: {{ .Values.persistence.subPath | default "" | quote }}
             {{- if and .Values.persistence.enabled .Values.persistence.rrdp.enabled }}
             - name: rrdp-data
-              mountPath: {{ .Values.krillConf.data_dir }}/rrdp
+              mountPath: {{ .Values.krillConf.data_dir }}/repo/rrdp
               subPath: {{ .Values.persistence.rrdp.subPath | default "" | quote }}
             {{- end }}
             {{- if and .Values.persistence.enabled .Values.persistence.rsync.enabled }}
             - name: rsync-data
-              mountPath: {{ .Values.krillConf.data_dir }}/rsync
+              mountPath: {{ .Values.krillConf.data_dir }}/repo/rsync
               subPath: {{ .Values.persistence.rsync.subPath | default "" | quote }}
             {{- end }}
           {{- if .Values.livenessProbe.enabled }}
