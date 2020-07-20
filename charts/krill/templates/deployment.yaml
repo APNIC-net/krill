@@ -1,0 +1,112 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "krill.fullname" . }}
+  labels:
+    {{- include "krill.labels" . | nindent 4 }}
+spec:
+{{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+{{- end }}
+  selector:
+    matchLabels:
+      {{- include "krill.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      labels:
+        {{- include "krill.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "krill.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          volumeMounts:
+            - name: krill-conf
+              mountPath: {{ .Values.krillConf.data_dir }}/krill.conf
+              subPath: krill.conf
+            - name: data
+              mountPath: {{ .Values.krillConf.data_dir }}
+              subPath: {{ .Values.persistence.subPath | default "" | quote }}
+            {{- if and .Values.persistence.enabled .Values.persistence.rrdp.enabled }}
+            - name: rrdp-data
+              mountPath: {{ .Values.krillConf.data_dir }}/repo/rrdp
+              subPath: {{ .Values.persistence.rrdp.subPath | default "" | quote }}
+            {{- end }}
+            {{- if and .Values.persistence.enabled .Values.persistence.rsync.enabled }}
+            - name: rsync-data
+              mountPath: {{ .Values.krillConf.data_dir }}/repo/rsync
+              subPath: {{ .Values.persistence.rsync.subPath | default "" | quote }}
+            {{- end }}
+          {{- if .Values.livenessProbe.enabled }}
+          livenessProbe:
+            tcpSocket:
+              port: http
+            failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+            successThreshold: {{ .Values.livenessProbe.successThreshold }}
+            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+          {{- end }}
+          {{- if .Values.readinessProbe.enabled }}
+          readinessProbe:
+            tcpSocket:
+              port: http
+            failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+            successThreshold: {{ .Values.readinessProbe.successThreshold }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: krill-conf
+          configMap:
+            name: {{ template "krill.fullname" . }}
+        - name: data
+        {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim | default (printf "%s-data" (include "krill.fullname" .)) }}
+        {{- else }}
+          emptyDir: {}
+        {{- end }}
+        {{- if and .Values.persistence.enabled .Values.persistence.rrdp.enabled }}
+        - name: rrdp-data
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.rrdp.existingClaim | default (printf "%s-rrdp" (include "krill.fullname" .)) }}
+        {{- end }}
+        {{- if and .Values.persistence.enabled .Values.persistence.rsync.enabled }}
+        - name: rsync-data
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.rsync.existingClaim | default (printf "%s-rsync" (include "krill.fullname" .)) }}
+        {{- end }}
