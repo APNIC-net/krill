@@ -1,0 +1,21 @@
+{{- if and .Values.persistence.rsync.enabled (not .Values.persistence.rsync.existingClaim) -}}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{ include "krill.fullname" . }}-rsync
+  labels:
+    {{- include "krill.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.rsync.accessMode | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.rsync.size | quote }}
+{{- if .Values.persistence.rsync.storageClass }}
+{{- if (eq "-" .Values.persistence.rsync.storageClass) }}
+  storageClassName: ""
+{{- else }}
+  storageClassName: {{ .Values.persistence.rsync.storageClass | quote }}
+{{- end }}
+{{- end }}
+{{- end -}}
