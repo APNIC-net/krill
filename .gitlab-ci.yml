@@ -5,39 +5,6 @@ stages:
   - publish_to_test
   - production
 
-docker_image:
-  image: $CI_TOOLS_IMAGE
-  stage: docker_image
-  variables:
-    DOCKER_DRIVER: overlay2
-  services:
-    - name: $CI_PROD_REGISTRY/ci/dind:1.0.0
-  script:
-    - setup_docker
-    - build
-  only:
-    - branches
-  except:
-    refs:
-      - master
-      - tags
-
-docker_prod_image:
-  image: $CI_TOOLS_IMAGE
-  stage: docker_image
-  variables:
-    DOCKER_DRIVER: overlay2
-  services:
-    - name: $CI_PROD_REGISTRY/ci/dind:1.0.0
-  script:
-    - setup_docker
-    - build ${CI_PROD_REGISTRY}
-  only:
-    - master
-  except:
-    refs:
-      - tags
-
 publish_chart_to_test_repo:
   stage: publish_to_test
   image: $CI_TOOLS_IMAGE
