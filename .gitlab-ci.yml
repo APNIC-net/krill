@@ -1,10 +1,5 @@
 image: alpine:latest
 
-variables:
-  HTTP_PROXY: ${HTTP_PROXY}
-  HTTPS_PROXY: ${HTTPS_PROXY}
-  NO_PROXY: ${NO_PROXY}
-
 stages:
   - docker_image
   - publish_to_test
