@@ -41,6 +41,11 @@ krillConf:
   log_type: "file"
   log_file: "/dev/stdout"
 
+  # Either provide an auth_token directly to write to a kubernetes secret and be loaded as env var KRILL_AUTH_TOKEN
+  auth_token: "secrettoken"
+  # or provide the name of an existing secret with `auth_token` key to be read instead.
+  existingSecret: ""
+
   # optional additional krill config to add, see https://github.com/APNIC-net/krill/blob/master/defaults/krill.conf
   extra_args: {}
     # repo_enabled: false
