@@ -38,6 +38,12 @@ spec:
             - name: http
               containerPort: 3000
               protocol: TCP
+          env:
+            - name: KRILL_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "krill.authTokenSecretName" . }}
+                  key: auth_token
           volumeMounts:
             - name: krill-conf
               mountPath: {{ .Values.krillConf.data_dir }}/krill.conf

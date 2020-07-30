@@ -61,3 +61,14 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Define secret names
+*/}}
+{{- define "krill.authTokenSecretName" -}}
+{{- if .Values.krillConf.existingSecret -}}
+{{- .Values.krillConf.existingSecret -}}
+{{- else -}}
+{{ include "krill.fullname" . }}-auth-token
+{{- end -}}
+{{- end -}}

@@ -15,6 +15,6 @@ data:
     {{- end }}
     {{- if .Values.krillConf.extra_args }}
     {{- range $key, $value := .Values.krillConf.extra_args }}
-    {{ $key }} = {{ $value }}
+    {{ $key }} = {{ $value | quote }}
     {{- end }}
     {{- end }}
