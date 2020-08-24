@@ -45,6 +45,11 @@ podDisruptionBudget:
   minAvailable: ~
   maxUnavailable: 1
 
+## See `kubectl explain deployment.spec.strategy` for more
+## ref: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy
+deploymentStrategy:
+  type: RollingUpdate
+
 podSecurityContext: {}
   # fsGroup: 2000
 
