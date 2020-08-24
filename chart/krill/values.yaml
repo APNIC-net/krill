@@ -168,6 +168,22 @@ autoscaling:
   targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
 
+# Settings for Krill's prometheus metrics
+metrics:
+  enabled: false
+  scrapeInterval: 30s
+
+  # Pod annotations for Prometheus scraping
+  podAnnotations: {}
+    # prometheus.io/scrape: "true"
+    # prometheus.io/port: "8085"
+    # prometheus.io/path: "/metrics"
+
+  # Alternatively, a service monitor for Prometheus-Operator can be configured
+  serviceMonitor:
+    enabled: false
+    additionalLabels: {}
+
 nodeSelector: {}
 
 tolerations: []
