@@ -14,6 +14,21 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
+krillConf:
+  data_dir: "/var/krill/data"
+  log_type: "file"
+  log_file: "/dev/stdout"
+
+  # Either provide an auth_token directly to write to a kubernetes secret and be loaded as env var KRILL_AUTH_TOKEN
+  auth_token: "secrettoken"
+  # or provide the name of an existing secret with `auth_token` key to be read instead.
+  existingSecret: ""
+
+  # optional additional krill config to add, see https://github.com/APNIC-net/krill/blob/master/defaults/krill.conf
+  extra_args: {}
+    # repo_enabled: false
+    # log_level: "warn"
+
 serviceAccount:
   # Specifies whether a service account should be created
   create: true
@@ -40,21 +55,6 @@ securityContext: {}
   # readOnlyRootFilesystem: true
   # runAsNonRoot: true
   # runAsUser: 1000
-
-krillConf:
-  data_dir: "/var/krill/data"
-  log_type: "file"
-  log_file: "/dev/stdout"
-
-  # Either provide an auth_token directly to write to a kubernetes secret and be loaded as env var KRILL_AUTH_TOKEN
-  auth_token: "secrettoken"
-  # or provide the name of an existing secret with `auth_token` key to be read instead.
-  existingSecret: ""
-
-  # optional additional krill config to add, see https://github.com/APNIC-net/krill/blob/master/defaults/krill.conf
-  extra_args: {}
-    # repo_enabled: false
-    # log_level: "warn"
 
 service:
   type: ClusterIP
@@ -120,46 +120,7 @@ persistence:
   storageClass: ""
   accessMode: ReadWriteOnce
   # Persistant storage size request
-  size: 1Gi
-
-  # Optionally configure separate PVC for rrdp data directory
-  rrdp:
-    enabled: false
-    # Existing claim to use
-    existingClaim: ""
-    # Existing claim's subPath to use, e.g. "data" (optional)
-    subPath: ""
-
-    # Persistent Volume Storage Class
-    # If defined, storageClassName: <storageClass>
-    # If set to "-", storageClassName: "", which disables dynamic provisioning
-    # If undefined (the default) or set to null, no storageClassName spec is
-    #   set, choosing the default provisioner.  (gp2 on AWS, standard on
-    #   GKE, AWS & OpenStack)
-    storageClass: ""
-    accessMode: ReadWriteOnce
-    # Persistant storage size request
-    size: 1Gi
-
-
-  # Optionally configure separate PVC for rsync data directory
-  rsync:
-    enabled: false
-    # Existing claim to use
-    existingClaim: ""
-    # Existing claim's subPath to use, e.g. "data" (optional)
-    subPath: ""
-
-    # Persistent Volume Storage Class
-    # If defined, storageClassName: <storageClass>
-    # If set to "-", storageClassName: "", which disables dynamic provisioning
-    # If undefined (the default) or set to null, no storageClassName spec is
-    #   set, choosing the default provisioner.  (gp2 on AWS, standard on
-    #   GKE, AWS & OpenStack)
-    storageClass: ""
-    accessMode: ReadWriteOnce
-    # Persistant storage size request
-    size: 1Gi
+  size: 10Gi
 
 autoscaling:
   enabled: false
