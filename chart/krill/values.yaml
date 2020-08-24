@@ -25,6 +25,11 @@ serviceAccount:
 
 podAnnotations: {}
 
+podDisruptionBudget:
+  enabled: false
+  minAvailable: ~
+  maxUnavailable: 1
+
 podSecurityContext: {}
   # fsGroup: 2000
 
