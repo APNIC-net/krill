@@ -26,7 +26,7 @@ publish_chart_to_prod_repo:
     - publish_chart prd
   only:
     refs:
-      - master
+      - release/0.6
   except:
       variables:
         - $DISABLED_PUBLISH
