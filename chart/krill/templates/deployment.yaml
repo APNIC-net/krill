@@ -11,6 +11,10 @@ spec:
   selector:
     matchLabels:
       {{- include "krill.selectorLabels" . | nindent 6 }}
+  {{- with .Values.deploymentStrategy }}
+  strategy:
+    {{ toYaml . | trim | nindent 4 }}
+  {{- end }}
   template:
     metadata:
       annotations:
@@ -51,16 +55,6 @@ spec:
             - name: data
               mountPath: {{ .Values.krillConf.data_dir }}
               subPath: {{ .Values.persistence.subPath | default "" | quote }}
-            {{- if and .Values.persistence.enabled .Values.persistence.rrdp.enabled }}
-            - name: rrdp-data
-              mountPath: {{ .Values.krillConf.data_dir }}/repo/rrdp
-              subPath: {{ .Values.persistence.rrdp.subPath | default "" | quote }}
-            {{- end }}
-            {{- if and .Values.persistence.enabled .Values.persistence.rsync.enabled }}
-            - name: rsync-data
-              mountPath: {{ .Values.krillConf.data_dir }}/repo/rsync
-              subPath: {{ .Values.persistence.rsync.subPath | default "" | quote }}
-            {{- end }}
           {{- if .Values.livenessProbe.enabled }}
           livenessProbe:
             tcpSocket:
@@ -105,14 +99,4 @@ spec:
             claimName: {{ .Values.persistence.existingClaim | default (printf "%s-data" (include "krill.fullname" .)) }}
         {{- else }}
           emptyDir: {}
-        {{- end }}
-        {{- if and .Values.persistence.enabled .Values.persistence.rrdp.enabled }}
-        - name: rrdp-data
-          persistentVolumeClaim:
-            claimName: {{ .Values.persistence.rrdp.existingClaim | default (printf "%s-rrdp" (include "krill.fullname" .)) }}
-        {{- end }}
-        {{- if and .Values.persistence.enabled .Values.persistence.rsync.enabled }}
-        - name: rsync-data
-          persistentVolumeClaim:
-            claimName: {{ .Values.persistence.rsync.existingClaim | default (printf "%s-rsync" (include "krill.fullname" .)) }}
         {{- end }}
