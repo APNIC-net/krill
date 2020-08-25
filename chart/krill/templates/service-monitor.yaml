@@ -1,0 +1,23 @@
+{{- if and .Values.metrics.enabled .Values.metrics.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ template "krill.fullname" . }}
+  {{- if .Values.metrics.serviceMonitor.namespace }}
+  namespace: {{ .Values.metrics.serviceMonitor.namespace }}
+  {{- end }}
+  labels:
+    {{- include "krill.labels" . | nindent 4 }}
+spec:
+  endpoints:
+  - port: {{ default "http" .Values.metrics.serviceMonitor.port }}
+    interval: {{ default "30s" .Values.metrics.serviceMonitor.interval }}
+    path: {{ default "/metrics" .Values.metrics.serviceMonitor.path }}
+  jobLabel: {{ template "krill.fullname" . }}
+  namespaceSelector:
+    matchNames:
+    - {{ .Release.Namespace }}
+  selector:
+    matchLabels:
+      {{- include "krill.selectorLabels" . | nindent 6 }}
+{{- end -}}
