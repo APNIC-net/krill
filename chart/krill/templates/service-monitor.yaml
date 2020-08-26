@@ -13,6 +13,10 @@ spec:
   - port: {{ default "http" .Values.metrics.serviceMonitor.port }}
     interval: {{ default "30s" .Values.metrics.serviceMonitor.interval }}
     path: {{ default "/metrics" .Values.metrics.serviceMonitor.path }}
+    {{- with .Values.metrics.serviceMonitor.tlsConfig }}
+    tlsConfig:
+      {{ toYaml . | trim | nindent 6 }}
+    {{- end }}
   jobLabel: {{ template "krill.fullname" . }}
   namespaceSelector:
     matchNames:
