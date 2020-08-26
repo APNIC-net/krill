@@ -11,6 +11,7 @@ metadata:
 spec:
   endpoints:
   - port: {{ default "http" .Values.metrics.serviceMonitor.port }}
+    scheme: {{ default "https" .Values.metrics.serviceMonitor.scheme }}
     interval: {{ default "30s" .Values.metrics.serviceMonitor.interval }}
     path: {{ default "/metrics" .Values.metrics.serviceMonitor.path }}
     {{- with .Values.metrics.serviceMonitor.tlsConfig }}

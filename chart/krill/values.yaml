@@ -148,6 +148,9 @@ metrics:
   # Alternatively, a service monitor for Prometheus-Operator can be configured
   serviceMonitor:
     enabled: false
+    scheme: https
+    path: /metrics
+    interval: 30s
     additionalLabels: {}
     # ServiceMonitor TLS Config: https://coreos.com/operators/prometheus/docs/latest/api.html#tlsconfig
     tlsConfig:
