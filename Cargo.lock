@@ -1047,7 +1047,7 @@ dependencies = [
 
 [[package]]
 name = "krill"
-version = "0.6.0-APNIC"
+version = "0.6.1-APNIC"
 dependencies = [
  "actix-service",
  "actix-web",
