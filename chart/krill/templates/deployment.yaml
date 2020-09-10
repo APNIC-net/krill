@@ -56,8 +56,9 @@ spec:
                   name: {{ template "krill.authTokenSecretName" . }}
                   key: auth_token
           volumeMounts:
-            - name: krill-config-volume
-              mountPath: {{ .Values.krillConf.data_dir }}
+            - name: krill-config
+              mountPath: {{ .Values.krillConf.data_dir }}/krill.conf
+              subPath: krill.conf
             - name: data
               mountPath: {{ .Values.krillConf.data_dir }}
               subPath: {{ .Values.persistence.subPath | default "" | quote }}
@@ -102,7 +103,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       volumes:
-        - name: krill-config-volume
+        - name: krill-config
           configMap:
             name: {{ template "krill.fullname" . }}
         - name: data
