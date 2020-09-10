@@ -61,6 +61,12 @@ securityContext: {}
   # runAsNonRoot: true
   # runAsUser: 1000
 
+# Additional init containers, e. g. for permissions changes in the pvc
+extraInitContainers: ""
+
+# Additional sidecar containers, e. g. for a sidecar process like uploading to a cloud bucket, or running an rsyncd service
+extraContainers: ""
+
 service:
   type: ClusterIP
   port: 3000
