@@ -318,8 +318,7 @@ impl ResourceClass {
 
         if &rcvd_resources != current.incoming_cert().resources() {
             let publish_mode = PublishMode::UpdatedResources(rcvd_resources);
-            let authorizations: Vec<RouteAuthorization> =
-                self.roas.authorizations().cloned().collect();
+            let authorizations: Vec<RouteAuthorization> = self.get_authorizations(roa_prefix_grouping_strategy)?;
             res.append(&mut self.republish(
                 authorizations.as_slice(),
                 repo_info,
@@ -470,6 +469,7 @@ impl ResourceClass {
         let roa_updates = self.update_roas(authorizations, mode, 
                                            signer, &roa_prefix_grouping_strategy)?;
         if roa_updates.contains_changes() {
+            debug!("Updating ROA. Updates: {:?}", roa_updates);
             for added in roa_updates.added().into_iter() {
                 delta.add(added);
             }
@@ -506,6 +506,8 @@ impl ResourceClass {
         }
 
         if !delta.is_empty() || !revocations.is_empty() || self.needs_publication(mode) {
+            debug!("Publishing delta: {:?}", delta);
+            debug!("Publishing revocations: {:?}", revocations);
             res.push(self.publish_objects(&repo_info, delta, revocations, mode, signer)?);
         }
 
@@ -808,7 +810,7 @@ impl ResourceClass {
 
         let mut res = vec![];
 
-        let authorizations: Vec<RouteAuthorization> = self.roas.authorizations().cloned().collect();
+        let authorizations: Vec<RouteAuthorization> = self.get_authorizations(roa_prefix_grouping_strategy)?;
 
         res.push(self.key_state.keyroll_activate(
             self.name.clone(),
@@ -1000,6 +1002,7 @@ impl ResourceClass {
         signer: &S,
         roa_prefix_grouping_strategy: &RoaPrefixGroupingStrategy,
     ) -> KrillResult<RoaUpdates> {
+        debug!("Calculating ROA updates for authorizations: {:?}", auths);
         let mut updates = RoaUpdates::default();
 
         let key = match mode {
@@ -1012,6 +1015,7 @@ impl ResourceClass {
             PublishMode::UpdatedResources(resources) => resources,
             PublishMode::KeyRollActivation => self.get_current_key()?.incoming_cert().resources(),
         };
+        debug!("Resources available for calculating ROA updates: {:?}", resources);
 
         let new_repo = match &mode {
             PublishMode::NewRepo(info) => Some(info.ca_repository(self.name_space())),
@@ -1109,6 +1113,24 @@ impl ResourceClass {
     /// Marks the ROAs as updated from a RoaUpdated event.
     pub fn roas_updated(&mut self, updates: RoaUpdates) {
         self.roas.updated(updates);
+    }
+
+    /// Retrieves the RC's authorizations based on the RoaPrefixGroupingStrategy currently being
+    /// used.
+    fn get_authorizations(&self, roa_prefix_grouping_strategy: &RoaPrefixGroupingStrategy)
+            -> KrillResult<Vec<RouteAuthorization>> {
+        match roa_prefix_grouping_strategy {
+            RoaPrefixGroupingStrategy::RoaPerPrefix => Ok(self.roas.authorizations().cloned().collect()),
+            RoaPrefixGroupingStrategy::RoaPerAsn => {
+                let mut res = vec![];
+                for (_, roa_info) in self.roas.iter() {
+                    for auth in roa_info.retrieve_route_authorizations()? {
+                        res.push(auth);
+                    }
+                }
+                Ok(res)
+            },
+        }
     }
 }
 
