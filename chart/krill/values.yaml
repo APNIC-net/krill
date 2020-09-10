@@ -61,11 +61,26 @@ securityContext: {}
   # runAsNonRoot: true
   # runAsUser: 1000
 
-# Additional init containers, e. g. for permissions changes in the pvc
+# Additional init containers, e.g. for permissions changes in the pvc
 extraInitContainers: ""
 
-# Additional sidecar containers, e. g. for a sidecar process like uploading to a cloud bucket, or running an rsyncd service
+# Additional sidecar containers, e.g. for a sidecar process like uploading to a cloud bucket, or running an rsyncd service
 extraContainers: ""
+
+# Additional configmaps to add to the configmap volume.
+extraConfigMaps: ""
+  # local.conf: |
+  #   {{- .Files.Get "scripts/example.conf" }}
+  # mystartup.sh: |
+  #   #!/bin/sh
+  #
+  #   echo 'Hello world'
+
+# Add additional volumes, e.g. for extraConfigMaps
+extraVolumes: ""
+
+# Add additional volumes mounts, e.g. for extraConfigMaps
+extraVolumeMounts: ""
 
 service:
   type: ClusterIP

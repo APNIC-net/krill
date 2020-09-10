@@ -18,3 +18,10 @@ data:
     {{ $key }} = {{ $value }}
     {{- end }}
     {{- end }}
+
+{{- if .Values.extraConfigMaps }}
+{{- range $key, $value := .Values.extraConfigMaps }}
+  {{ $key }}: |
+    {{- tpl $value $ | nindent 4 }}
+{{- end }}
+{{- end }}

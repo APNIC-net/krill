@@ -56,12 +56,14 @@ spec:
                   name: {{ template "krill.authTokenSecretName" . }}
                   key: auth_token
           volumeMounts:
-            - name: krill-conf
-              mountPath: {{ .Values.krillConf.data_dir }}/krill.conf
-              subPath: krill.conf
+            - name: krill-config-volume
+              mountPath: {{ .Values.krillConf.data_dir }}
             - name: data
               mountPath: {{ .Values.krillConf.data_dir }}
               subPath: {{ .Values.persistence.subPath | default "" | quote }}
+            {{- with .Values.extraVolumeMounts }}
+            {{- tpl . $ | nindent 12 }}
+            {{- end }}
           {{- if .Values.livenessProbe.enabled }}
           livenessProbe:
             tcpSocket:
@@ -100,7 +102,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       volumes:
-        - name: krill-conf
+        - name: krill-config-volume
           configMap:
             name: {{ template "krill.fullname" . }}
         - name: data
@@ -109,4 +111,7 @@ spec:
             claimName: {{ .Values.persistence.existingClaim | default (printf "%s-data" (include "krill.fullname" .)) }}
         {{- else }}
           emptyDir: {}
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- tpl . $ | nindent 8 }}
         {{- end }}
