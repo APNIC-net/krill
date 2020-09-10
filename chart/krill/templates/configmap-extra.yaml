@@ -1,0 +1,13 @@
+{{- if .Values.extraConfigMaps }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "krill.fullname" . }}-extraConfigMaps
+  labels:
+    {{- include "krill.labels" . | nindent 4 }}
+data:
+{{- range $key, $value := .Values.extraConfigMaps }}
+  {{ $key }}: |
+    {{- tpl $value $ | nindent 4 }}
+{{- end }}
+{{- end }}
